@@ -125,7 +125,7 @@ scores. No model ever sees it during training or tuning.
 
 **https://github.com/Epsom700/bnpl-default-risk-ml**
 
-**Live Streamlit app:** `https://<your-app>.streamlit.app` ← replace after deploying
+**Live Streamlit app:** **https://bits-2026aj05312-bnpl.streamlit.app/**
 
 ### Repository structure
 
@@ -241,7 +241,7 @@ discriminates. Naive Bayes is the live demonstration — at 0.8205 accuracy it i
 
 ## Streamlit app
 
-**Live app:** `https://<your-app>.streamlit.app` ← replace after deploying
+**Live app:** **https://bits-2026aj05312-bnpl.streamlit.app/**
 
 ### Required features
 

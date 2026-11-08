@@ -272,6 +272,9 @@ with tab_single:
     with right:
         st.markdown("**Classification report**")
         report = pd.DataFrame(res["_report"]).T
+        # the scalar "accuracy" entry gets broadcast into every column, support included
+        if "accuracy" in report.index:
+            report.loc["accuracy", "support"] = len(y)
         report["support"] = report["support"].astype(int)
         st.dataframe(
             report.style.format(
