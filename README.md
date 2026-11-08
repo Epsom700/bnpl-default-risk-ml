@@ -123,9 +123,9 @@ scores. No model ever sees it during training or tuning.
 
 ## c. GitHub repository link
 
-> **https://github.com/<your-username>/bnpl-default-risk-ml** ← replace with your repository URL
+**https://github.com/Epsom700/bnpl-default-risk-ml**
 
-**Live Streamlit app:** > **https://<your-app>.streamlit.app** ← replace after deploying
+**Live Streamlit app:** `https://<your-app>.streamlit.app` ← replace after deploying
 
 ### Repository structure
 
