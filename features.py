@@ -1,10 +1,4 @@
-"""Shared schema + feature derivation for the BNPL default-risk project.
-
-`train_models.py` and `app.py` both import from here, so the columns that reach a
-saved pipeline are guaranteed to be identical at fit time and at scoring time.
-No sklearn estimator is defined in this module, which keeps the joblib files
-free of custom unpicklable objects.
-"""
+"""Shared schema and feature engineering, used by train_models.py and app.py."""
 
 import numpy as np
 import pandas as pd
@@ -13,7 +7,6 @@ ID_COL = "Customer_ID"
 TARGET = "Default_Risk"
 CLASS_ORDER = ["Low", "Medium", "High"]
 
-# Columns a user-supplied CSV must carry (the raw dataset schema).
 RAW_NUMERIC = [
     "Age",
     "Income_USD",
@@ -29,7 +22,6 @@ RAW_CATEGORICAL = [
 ]
 REQUIRED_COLUMNS = RAW_NUMERIC + RAW_CATEGORICAL + [TARGET]
 
-# Columns produced by `derive_features`.
 DERIVED_NUMERIC = [
     "Monthly_Income_USD",
     "Debt_To_Monthly_Income",
@@ -54,13 +46,7 @@ _EPS = 1.0  # guards the ratio denominators against zero income
 
 
 def derive_features(df: pd.DataFrame) -> pd.DataFrame:
-    """Add the engineered credit-risk features to a copy of `df`.
-
-    Every derived column is a row-wise function of that row only, so this is
-    safe to run before the train/test split without leaking test information.
-    The two `*_Was_Missing` flags are computed here, before the pipeline's
-    imputer fills the gaps, so the models can still see that a value was absent.
-    """
+    """Add engineered features. Row-wise only, so no leakage across the split."""
     out = df.copy()
 
     out["Income_Was_Missing"] = out["Income_USD"].isna().astype(int)
@@ -69,21 +55,17 @@ def derive_features(df: pd.DataFrame) -> pd.DataFrame:
     monthly_income = out["Income_USD"] / 12.0
     out["Monthly_Income_USD"] = monthly_income
 
-    # Debt burden relative to one month of take-home pay - the single strongest
-    # risk signal in this dataset.
+    # strongest single signal in the data
     out["Debt_To_Monthly_Income"] = out["Total_BNPL_Debt_USD"] / (monthly_income + _EPS)
 
-    # Average ticket size of the outstanding BNPL loans.
     out["Debt_Per_Active_Loan"] = out["Total_BNPL_Debt_USD"] / out[
         "Total_BNPL_Active_Loans"
     ].clip(lower=1)
 
-    # How large a typical purchase is against monthly income.
     out["Txn_To_Monthly_Income"] = out["Average_Transaction_Value_USD"] / (
         monthly_income + _EPS
     )
 
-    # Creditworthiness spread across the number of parallel commitments.
     out["Credit_Score_Per_Loan"] = out["Credit_Score"] / out[
         "Total_BNPL_Active_Loans"
     ].clip(lower=1)
@@ -94,8 +76,6 @@ def derive_features(df: pd.DataFrame) -> pd.DataFrame:
     out["Credit_Score_Band"] = pd.cut(
         out["Credit_Score"], bins=CREDIT_BANDS, labels=CREDIT_LABELS, right=False
     ).astype(object)
-    # A missing credit score must not become its own band - the imputer and the
-    # Credit_Score_Was_Missing flag already carry that information.
     out["Credit_Score_Band"] = out["Credit_Score_Band"].where(
         out["Credit_Score"].notna(), "Unknown"
     )

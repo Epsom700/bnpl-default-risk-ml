@@ -1,15 +1,6 @@
-"""Train and persist the five classifiers for BNPL default-risk prediction.
+"""Train the five classifiers and save pipelines, metrics and test_data.csv.
 
-Run from the repository root:
-
-    python train_models.py
-
-Outputs
--------
-model/<slug>.joblib   one self-contained Pipeline per classifier
-model/metrics.json    hold-out metrics + confusion matrices for the app
-model/metadata.json   dataset / split / feature bookkeeping
-test_data.csv         the 20% hold-out split in the RAW schema, for the app
+Usage: python train_models.py
 """
 
 import json
@@ -18,15 +9,8 @@ import time
 import warnings
 from pathlib import Path
 
-# numpy 2.x on macOS/Accelerate raises spurious overflow / divide-by-zero
-# RuntimeWarnings from inside the lbfgs gradient matmul. The fitted coefficients
-# stay finite and the scores are unaffected, so only that specific noise is
-# filtered. PYTHONWARNINGS is set as well so the joblib worker processes that
-# GridSearchCV spawns inherit the filter - they do not inherit warnings.filters.
-# PYTHONWARNINGS matches its message field literally from the start of the
-# string, so a regex cannot be used there; the filter is scoped by category and
-# by the two sklearn modules that emit the noise instead. ConvergenceWarning is
-# a UserWarning, so genuine fit problems are still reported.
+# silence spurious matmul RuntimeWarnings from numpy/Accelerate on macOS,
+# including in the GridSearchCV worker processes
 _WORKER_FILTERS = ",".join(
     f"ignore::RuntimeWarning:{m}"
     for m in ("sklearn.utils.extmath", "sklearn.linear_model._linear_loss")
@@ -74,12 +58,7 @@ TEST_CSV = Path("test_data.csv")
 
 
 def build_preprocessor() -> ColumnTransformer:
-    """Median-impute + scale the numerics, mode-impute + one-hot the categoricals.
-
-    Scaling matters for Logistic Regression, KNN and the RBF SVM; it is
-    harmless for the Decision Tree and Gaussian Naive Bayes, so a single shared
-    preprocessor keeps the five models comparable on identical inputs.
-    """
+    """Impute + scale numerics, impute + one-hot categoricals."""
     numeric = Pipeline(
         [
             ("impute", SimpleImputer(strategy="median")),
@@ -101,9 +80,7 @@ def build_preprocessor() -> ColumnTransformer:
     )
 
 
-# Each entry: slug -> (display name, estimator, hyper-parameter grid, cv folds).
-# `class_weight="balanced"` is used wherever the estimator supports it, because
-# 88% of the rows are Low risk and the business cost sits on the High class.
+# slug -> (name, estimator, param grid, cv folds)
 MODEL_SPECS = {
     "logistic_regression": (
         "Logistic Regression",
@@ -155,9 +132,7 @@ def evaluate(name, pipe, X_test, y_test, classes):
     """Hold-out metrics for one fitted pipeline."""
     y_pred = pipe.predict(X_test)
     proba = pipe.predict_proba(X_test)
-    # roc_auc_score requires `labels` in sorted order, while `classes` is kept in
-    # risk order (Low -> High) for readable confusion matrices. Score the AUC
-    # against the sorted labels with the probability columns realigned to match.
+    # roc_auc_score needs sorted labels
     auc_labels = sorted(classes)
     order = [list(pipe.classes_).index(c) for c in auc_labels]
     auc_proba = proba[:, order]
@@ -200,8 +175,7 @@ def main():
     classes = [c for c in F.CLASS_ORDER if c in set(raw[F.TARGET])]
     y = raw[F.TARGET]
 
-    # Split the RAW rows so test_data.csv keeps the original schema; feature
-    # derivation is row-wise, so deriving before or after the split is identical.
+    # split raw rows so test_data.csv keeps the original schema
     raw_train, raw_test = train_test_split(
         raw, test_size=TEST_SIZE, stratify=y, random_state=RANDOM_STATE
     )

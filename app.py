@@ -1,8 +1,4 @@
-"""Streamlit front-end for the BNPL default-risk classifiers.
-
-The five pipelines in model/ are already fitted. This app only scores an
-uploaded hold-out CSV with them - it never refits on the uploaded rows.
-"""
+"""Streamlit app: scores an uploaded test CSV with the saved models (no retraining)."""
 
 import json
 from pathlib import Path
@@ -91,7 +87,6 @@ def score(pipe, X, y_true, classes):
         "mcc": matthews_corrcoef(y_true, y_pred),
     }
 
-    # AUC needs every class present in y_true and sorted labels.
     present = sorted(set(y_true) & set(pipe.classes_))
     if len(present) >= 2 and hasattr(pipe, "predict_proba"):
         proba = pipe.predict_proba(X)[
@@ -101,11 +96,7 @@ def score(pipe, X, y_true, classes):
             out["auc_ovr_macro"] = roc_auc_score(y_true, proba[:, 1], labels=present)
         else:
             if len(present) < len(pipe.classes_):
-                # A class the model knows is absent from this file, so the kept
-                # columns no longer sum to 1. Renormalise only in that case -
-                # dividing when the rows already sum to 1 perturbs the scores in
-                # the last few decimals and stops the app from reproducing
-                # metrics.json exactly.
+                # some class missing from the file, renormalise
                 proba = proba / proba.sum(axis=1, keepdims=True)
             out["auc_ovr_macro"] = roc_auc_score(
                 y_true, proba, multi_class="ovr", average="macro", labels=present
@@ -268,8 +259,6 @@ tab_single, tab_compare, tab_predict = st.tabs(
 with tab_single:
     res = scored[model_choice]
     st.subheader(f"{model_choice} - evaluation metrics")
-    # Three per row rather than six: six metric columns squeeze the value text
-    # into an ellipsis on narrower screens.
     items = list(METRIC_LABELS.items())
     for row_start in (0, 3):
         for col, (key, label) in zip(st.columns(3), items[row_start : row_start + 3]):
@@ -316,7 +305,6 @@ with tab_compare:
         ).set_index("ML Model Name")
         table = table.reindex([n for n in MODEL_FILES if n in table.index])
         st.dataframe(
-            # Light fill, so the dark cell text stays readable in both themes.
             table.style.format("{:.4f}").highlight_max(axis=0, color="#a5d6a7"),
             use_container_width=True,
         )
@@ -340,8 +328,6 @@ with tab_compare:
         st.pyplot(fig)
 
         st.markdown("**Confusion matrix per model**")
-        # Three per row in the canonical model order - five across leaves each
-        # heatmap too narrow to read its cell counts.
         ordered = [n for n in MODEL_FILES if n in scored]
         for row_start in range(0, len(ordered), 3):
             chunk = ordered[row_start : row_start + 3]
@@ -367,8 +353,6 @@ with tab_predict:
 
     pipe = models[model_choice]
     proba = pipe.predict_proba(X)
-    # pipe.classes_ is alphabetical (High, Low, Medium); show the probability
-    # columns in risk order instead.
     for cls in [c for c in F.CLASS_ORDER if c in pipe.classes_]:
         pred_df[f"P({cls})"] = proba[:, list(pipe.classes_).index(cls)].round(4)
 
