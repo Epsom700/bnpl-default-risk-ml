@@ -1,0 +1,63 @@
+{
+  "dataset": "BNPL_Financial_Default_Risk_Dataset.csv",
+  "n_rows": 10000,
+  "n_raw_columns": 11,
+  "n_features_used": 18,
+  "numeric_features": [
+    "Age",
+    "Income_USD",
+    "Credit_Score",
+    "Total_BNPL_Active_Loans",
+    "Total_BNPL_Debt_USD",
+    "Average_Transaction_Value_USD",
+    "Monthly_Income_USD",
+    "Debt_To_Monthly_Income",
+    "Debt_Per_Active_Loan",
+    "Txn_To_Monthly_Income",
+    "Credit_Score_Per_Loan",
+    "Income_Was_Missing",
+    "Credit_Score_Was_Missing"
+  ],
+  "categorical_features": [
+    "Employment_Status",
+    "Late_Payment_History",
+    "Shopping_Category_Most_Frequent",
+    "Age_Band",
+    "Credit_Score_Band"
+  ],
+  "target": "Default_Risk",
+  "classes": [
+    "Low",
+    "Medium",
+    "High"
+  ],
+  "class_counts": {
+    "Low": 8801,
+    "Medium": 678,
+    "High": 521
+  },
+  "test_size": 0.2,
+  "random_state": 42,
+  "n_train": 8000,
+  "n_test": 2000,
+  "best_params": {
+    "logistic_regression": {
+      "clf__C": "10.0"
+    },
+    "decision_tree": {
+      "clf__max_depth": "None",
+      "clf__min_samples_leaf": "5"
+    },
+    "knn": {
+      "clf__n_neighbors": "5",
+      "clf__weights": "distance"
+    },
+    "naive_bayes": {
+      "clf__var_smoothing": "0.001"
+    },
+    "svm": {
+      "clf__C": "10.0",
+      "clf__gamma": "scale"
+    }
+  }
+}
