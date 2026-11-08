@@ -281,14 +281,3 @@ The `model/` directory is committed, so the deployed app loads the fitted
 pipelines directly and never trains in the cloud. Dependency versions are pinned
 in `requirements.txt` because scikit-learn will refuse to unpickle a model saved
 by a different minor version.
-
----
-
-## Notes on academic integrity
-
-- The dataset was processed, split and modelled from scratch in `train_models.py`;
-  no pre-built notebook or template was copied.
-- The nine engineered features in `features.py` are specific to BNPL credit risk
-  and were derived from the EDA in `notebooks/BNPL_Model_Development.ipynb`.
-- All reported metrics are reproducible: run `python train_models.py` and compare
-  against `model/metrics.json`. `random_state=42` is fixed throughout.
